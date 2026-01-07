@@ -42,7 +42,7 @@ const AddTheory = () => {
     }
 
     try {
-      await axios.post("http://localhost:5000/api/theory", formData);
+      await axios.post("https://theory-hub-project.onrender.com", formData);
       alert("Theory added successfully!");
       setFormData({
         languageId: "",
