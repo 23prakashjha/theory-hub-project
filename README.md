@@ -1,5 +1,4 @@
-Theory Hub-
-Theory Hub is a comprehensive platform for learning programming languages and frameworks. It provides theory, examples, and interactive code snippets for modern technologies. Users can register, log in, and explore programming concepts, while admins can manage content and users securely.
+Theory Hub- is a comprehensive platform for learning programming languages and frameworks. It provides theory, examples, and interactive code snippets for modern technologies. Users can register, log in, and explore programming concepts, while admins can manage content and users securely.
 
 ✨ Project Overview
 
@@ -127,9 +126,6 @@ cd ../frontend
 npm install
 npm start
 
-
-Open your browser at: http://localhost:3000
-
 🔗 API Endpoints
 Method	Route	Description
 POST	/api/auth/signup	Register a new user
@@ -175,9 +171,6 @@ Interactive coding challenges
 
 User progress tracking
 
-Role-based analytics
-
-Dark/light mode toggle
 
 Real-time collaborative notes
 
