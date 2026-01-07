@@ -34,31 +34,38 @@ const Signup = () => {
 
     try {
       const res = await axios.post(
-        "https://theory-hub-project.onrender.com/api/auth/register",
+        "https://theory-hub-project.onrender.com/api/auth/signup", // ✅ correct endpoint
         {
           name: formData.name,
           email: formData.email,
           password: formData.password
         },
-        { withCredentials: true }
+        {
+          headers: {
+            "Content-Type": "application/json"
+          }
+        }
       );
+
+      // ✅ Save user + token if needed
+      localStorage.setItem("user", JSON.stringify(res.data));
+      if (res.data.token) localStorage.setItem("token", res.data.token);
 
       setSuccess("Account created successfully 🎉");
 
-      // ✅ If admin → dashboard, else → login
-      if (res.data.user.role === "admin") {
-        localStorage.setItem("user", JSON.stringify(res.data.user));
-        navigate("/admin/dashboard");
-      } else {
-        setTimeout(() => {
+      // Redirect after 1 second
+      setTimeout(() => {
+        // Admin redirect
+        if (res.data.role === "Admin") {
+          navigate("/admin/dashboard");
+        } else {
           navigate("/login");
-        }, 1200);
-      }
+        }
+      }, 1000);
 
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Signup failed"
-      );
+      console.error("Signup Error:", err.response || err);
+      setError(err.response?.data?.message || "Signup failed. Try again.");
     } finally {
       setLoading(false);
     }
