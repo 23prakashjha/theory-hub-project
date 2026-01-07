@@ -23,6 +23,7 @@ const Login = () => {
     setLoading(true);
 
     try {
+      // ✅ POST login request
       const res = await axios.post(
         "https://theory-hub-project.onrender.com/api/auth/login",
         {
@@ -30,26 +31,32 @@ const Login = () => {
           password: formData.password
         },
         {
-          withCredentials: true
+          headers: {
+            "Content-Type": "application/json"
+          }
         }
       );
 
-      // ✅ Save user from backend
+      // ✅ Save token + user info in localStorage
+      localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      // ✅ Redirect to home
-      navigate("/");
+      // ✅ Redirect to home or admin dashboard
+      if (res.data.user.role === "Admin") {
+        navigate("/admin/dashboard");
+      } else {
+        navigate("/");
+      }
     } catch (err) {
-      setError(
-        err.response?.data?.message || "Login failed"
-      );
+      console.error("Login Error:", err.response || err);
+      setError(err.response?.data?.message || "Login failed. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center py-24 px-4 bg-gradient-to-br from-slate-900 via-gray-900 to-black">
+    <div className="flex justify-center items-center py-24 px-4 bg-gradient-to-br from-slate-900 via-gray-900 to-black min-h-screen">
       <div className="w-full max-w-md bg-gray-800/90 backdrop-blur rounded-2xl shadow-2xl p-8">
 
         <h2 className="text-3xl font-bold text-center text-white mb-2">
@@ -114,4 +121,5 @@ const Login = () => {
 };
 
 export default Login;
+
 
