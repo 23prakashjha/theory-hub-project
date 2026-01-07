@@ -15,7 +15,7 @@ const AddTheory = () => {
   useEffect(() => {
     const fetchLanguages = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/languages");
+        const res = await axios.get("https://theory-hub-project.onrender.com");
         if (res.data) setLanguages(res.data);
       } catch (error) {
         console.error("Failed to fetch languages:", error);
@@ -42,7 +42,7 @@ const AddTheory = () => {
     }
 
     try {
-      await axios.post("http://localhost:5000/api/theory", formData);
+      await axios.post("https://theory-hub-project.onrender.com", formData);
       alert("Theory added successfully!");
       setFormData({
         languageId: "",

@@ -24,8 +24,8 @@ const LanguageDetails = () => {
         setError("");
 
         const [langRes, theoryRes] = await Promise.all([
-          axios.get(`http://localhost:5000/api/languages/${id}`),
-          axios.get("http://localhost:5000/api/theory", {
+          axios.get(`https://theory-hub-project.onrender.com/${id}`),
+          axios.get("https://theory-hub-project.onrender.com", {
             params: { languageId: id },
           }),
         ]);
