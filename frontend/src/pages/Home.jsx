@@ -24,7 +24,7 @@ const Home = () => {
   useEffect(() => {
     const fetchLanguages = async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/languages");
+        const res = await axios.get("https://theory-hub-project.onrender.com");
 
         const withGradients = res.data.map((lang, index) => ({
           ...lang,
