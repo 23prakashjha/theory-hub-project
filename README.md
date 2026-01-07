@@ -1,4 +1,5 @@
-Theory Hub is a full-stack web application for learning programming languages and frameworks. Users can register, log in, view theory, examples, and code snippets, and access an admin dashboard for managing content.
+Theory Hub is a full-stack web application for learning programming languages and frameworks.
+Users can register, log in, view theory, examples, and code snippets, and access an admin dashboard for managing content.
 
 Table of Contents
 
@@ -57,3 +58,4 @@ MongoDB / Mongoose
 bcryptjs for password hashing
 
 jsonwebtoken for JWT authentication
+
