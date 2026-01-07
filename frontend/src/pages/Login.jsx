@@ -22,12 +22,12 @@ const Login = () => {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      // Save user + token
-      localStorage.setItem("user", JSON.stringify(res.data));
-      if (res.data.token) localStorage.setItem("token", res.data.token);
+      // ✅ Save user and token
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      // Redirect based on role
-      if (res.data.role === "Admin") {
+      // ✅ Redirect based on role
+      if (res.data.user.role === "Admin") {
         navigate("/admin/dashboard");
       } else {
         navigate("/");
@@ -91,4 +91,3 @@ const Login = () => {
 };
 
 export default Login;
-
