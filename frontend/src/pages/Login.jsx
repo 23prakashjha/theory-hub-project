@@ -4,18 +4,11 @@ import axios from "axios";
 
 const Login = () => {
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: ""
-  });
-
+  const [formData, setFormData] = useState({ email: "", password: "" });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -23,57 +16,39 @@ const Login = () => {
     setLoading(true);
 
     try {
-      // ✅ POST login request
       const res = await axios.post(
         "https://theory-hub-project.onrender.com/api/auth/login",
-        {
-          email: formData.email,
-          password: formData.password
-        },
-        {
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
+        formData,
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      // ✅ Save token + user info in localStorage
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      // Save user + token
+      localStorage.setItem("user", JSON.stringify(res.data));
+      if (res.data.token) localStorage.setItem("token", res.data.token);
 
-      // ✅ Redirect to home or admin dashboard
-      if (res.data.user.role === "Admin") {
+      // Redirect based on role
+      if (res.data.role === "Admin") {
         navigate("/admin/dashboard");
       } else {
         navigate("/");
       }
     } catch (err) {
       console.error("Login Error:", err.response || err);
-      setError(err.response?.data?.message || "Login failed. Try again.");
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center py-24 px-4 bg-gradient-to-br from-slate-900 via-gray-900 to-black min-h-screen">
+    <div className="flex justify-center items-center py-24 px-4 bg-gradient-to-br from-slate-900 via-gray-900 to-black">
       <div className="w-full max-w-md bg-gray-800/90 backdrop-blur rounded-2xl shadow-2xl p-8">
+        <h2 className="text-3xl font-bold text-center text-white mb-2">Welcome Back</h2>
+        <p className="text-gray-400 text-center mb-6">Login to CodeTheory 🔐</p>
 
-        <h2 className="text-3xl font-bold text-center text-white mb-2">
-          Welcome Back
-        </h2>
-        <p className="text-gray-400 text-center mb-6">
-          Login to CodeTheory 🔐
-        </p>
-
-        {error && (
-          <p className="text-red-400 text-center mb-4 font-semibold">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-red-400 text-center mb-4 font-semibold">{error}</p>}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-
           <div>
             <label className="text-gray-300 text-sm">Email</label>
             <input
@@ -105,21 +80,15 @@ const Login = () => {
           >
             {loading ? "Logging in..." : "Login"}
           </button>
-
         </form>
 
         <p className="text-gray-400 text-sm text-center mt-6">
-          Don’t have an account?{" "}
-          <Link to="/signup" className="text-blue-400 hover:underline">
-            Register Here
-          </Link>
+          Don’t have an account? <Link to="/signup" className="text-blue-400 hover:underline">Register Here</Link>
         </p>
-
       </div>
     </div>
   );
 };
 
 export default Login;
-
 
