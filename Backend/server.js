@@ -18,43 +18,65 @@ const app = express();
 
 // -------------------- Middleware --------------------
 
-// Parse JSON requests
+// Parse JSON body
 app.use(express.json());
 
-// Enable CORS for frontend (React)
+// ✅ FIXED CORS CONFIG (LOCAL + PRODUCTION)
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://theory-hub-project.vercel.app"
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173", // Your React app URL
-    credentials: true,              // Allow cookies
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("CORS not allowed"));
+      }
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
   })
 );
 
-// Serve static files (like uploaded avatars)
+// ✅ VERY IMPORTANT FOR PREFLIGHT REQUESTS
+app.options("*", cors());
+
+// Serve static files
 app.use("/uploads", express.static("uploads"));
 
 // -------------------- Routes --------------------
-app.use("/api/auth", authRoutes);       // Auth routes: login/signup
-app.use("/api/languages", languageRoutes); // Language routes
-app.use("/api/theory", theoryRoutes);  
-app.use("/api/users", userRoutes);  // Theory routes
+app.use("/api/auth", authRoutes);
+app.use("/api/languages", languageRoutes);
+app.use("/api/theory", theoryRoutes);
+app.use("/api/users", userRoutes);
 
-// Health check route
+// Health check
 app.get("/", (req, res) => {
   res.send("CodeTheory API Running...");
 });
 
 // -------------------- Error Handling --------------------
+
 // Handle unknown routes
-app.use((req, res, next) => {
+app.use((req, res) => {
   res.status(404).json({ message: "Route not found" });
 });
 
 // Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: "Server error", error: err.message });
+  res.status(500).json({
+    message: "Server error",
+    error: err.message
+  });
 });
 
 // -------------------- Start Server --------------------
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT}`)
+);
