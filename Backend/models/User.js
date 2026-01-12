@@ -1,3 +1,4 @@
+// models/User.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -23,7 +24,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
-      select: false, // 🔥 NEVER return password by default
+      select: false, // 🔥 never return password by default
     },
 
     avatar: {
@@ -33,26 +34,29 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["User", "Admin"], // ✅ Match backend role checks
+      enum: ["User", "Admin"], // ✅ must match backend role checks
       default: "User",
     },
 
     joined: {
-      type: Date, // store as Date object
-      default: Date.now,
+      type: Date, // store as proper Date object
+      default: Date.now, // ✅ fix default
     },
 
     viewedLanguages: [
       {
-        _id: false,
+        _id: false, // prevents Mongo from creating extra _id for array items
         name: String,
         logo: String,
       },
     ],
   },
-  { timestamps: true }
+  {
+    timestamps: true, // createdAt & updatedAt auto
+  }
 );
 
+// Ensure unique indexes are applied in MongoDB
+userSchema.index({ email: 1 }, { unique: true });
+
 export default mongoose.model("User", userSchema);
-
-
