@@ -7,18 +7,25 @@ const router = express.Router();
 
 /**
  * @route   GET /api/theory
- * @desc    Get all theory for a language
- * @query   languageId
+ * @desc    Get all theory OR theory by language
+ * @query   languageId (optional)
  */
 router.get("/", async (req, res) => {
   try {
     const { languageId } = req.query;
 
-    if (!mongoose.Types.ObjectId.isValid(languageId)) {
-      return res.status(400).json({ message: "Invalid language ID" });
+    let filter = {};
+
+    // If languageId provided → filter by language
+    if (languageId) {
+      if (!mongoose.Types.ObjectId.isValid(languageId)) {
+        return res.status(400).json({ message: "Invalid language ID" });
+      }
+      filter.language = languageId;
     }
 
-    const theories = await Theory.find({ language: languageId })
+    const theories = await Theory.find(filter)
+      .populate("language", "name")
       .sort({ createdAt: 1 });
 
     res.status(200).json(theories);
@@ -59,7 +66,7 @@ router.post("/", async (req, res) => {
     }
 
     const theory = await Theory.create({
-      language: languageId,   // ✅ CORRECT FIELD
+      language: languageId,
       title,
       content,
       codeExample,
@@ -72,8 +79,35 @@ router.post("/", async (req, res) => {
   }
 });
 
-export default router;
+/**
+ * @route   DELETE /api/theory/:id
+ * @desc    Delete theory by ID
+ */
+router.delete("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid theory ID" });
+    }
+
+    const deletedTheory = await Theory.findByIdAndDelete(id);
+
+    if (!deletedTheory) {
+      return res.status(404).json({ message: "Theory not found" });
+    }
+
+    res.status(200).json({
+      message: "Theory deleted successfully",
+      deletedTheory,
+    });
+  } catch (error) {
+    console.error("Error deleting theory:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+export default router;
 
 
 
