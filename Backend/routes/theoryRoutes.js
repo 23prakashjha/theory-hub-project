@@ -6,17 +6,14 @@ import Language from "../models/Language.js";
 const router = express.Router();
 
 /**
- * @route   GET /api/theory
- * @desc    Get all theory OR theory by language
- * @query   languageId (optional)
+ * GET /api/theory
+ * Get all theory OR filter by languageId (optional)
  */
 router.get("/", async (req, res) => {
   try {
     const { languageId } = req.query;
 
-    let filter = {};
-
-    // If languageId provided → filter by language
+    const filter = {};
     if (languageId) {
       if (!mongoose.Types.ObjectId.isValid(languageId)) {
         return res.status(400).json({ message: "Invalid language ID" });
@@ -25,8 +22,8 @@ router.get("/", async (req, res) => {
     }
 
     const theories = await Theory.find(filter)
-      .populate("language", "name")
-      .sort({ createdAt: 1 });
+      .populate("language", "name") // Populate language name
+      .sort({ createdAt: -1 }); // Latest first
 
     res.status(200).json(theories);
   } catch (error) {
@@ -36,8 +33,8 @@ router.get("/", async (req, res) => {
 });
 
 /**
- * @route   POST /api/theory
- * @desc    Add new theory
+ * POST /api/theory
+ * Create new theory
  */
 router.post("/", async (req, res) => {
   try {
@@ -47,30 +44,28 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Title and content are required" });
     }
 
-    // Create language if needed
+    // Create new language if needed
     if (!languageId && newLanguageName) {
       const name = newLanguageName.trim();
-
       let language = await Language.findOne({ name });
-      if (!language) {
-        language = await Language.create({ name });
-      }
-
+      if (!language) language = await Language.create({ name });
       languageId = language._id;
     }
 
+    // Validate languageId
     if (!mongoose.Types.ObjectId.isValid(languageId)) {
-      return res.status(400).json({
-        message: "Valid languageId or newLanguageName is required",
-      });
+      return res.status(400).json({ message: "Valid languageId or newLanguageName required" });
     }
 
     const theory = await Theory.create({
       language: languageId,
       title,
       content,
-      codeExample,
+      codeExample: codeExample || "",
     });
+
+    // Populate the language field before returning
+    await theory.populate("language", "name");
 
     res.status(201).json(theory);
   } catch (error) {
@@ -80,8 +75,8 @@ router.post("/", async (req, res) => {
 });
 
 /**
- * @route   DELETE /api/theory/:id
- * @desc    Delete theory by ID
+ * DELETE /api/theory/:id
+ * Delete theory by ID
  */
 router.delete("/:id", async (req, res) => {
   try {
@@ -91,15 +86,12 @@ router.delete("/:id", async (req, res) => {
       return res.status(400).json({ message: "Invalid theory ID" });
     }
 
-    const deletedTheory = await Theory.findByIdAndDelete(id);
-
-    if (!deletedTheory) {
-      return res.status(404).json({ message: "Theory not found" });
-    }
+    const deleted = await Theory.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ message: "Theory not found" });
 
     res.status(200).json({
       message: "Theory deleted successfully",
-      deletedTheory,
+      id: deleted._id,
     });
   } catch (error) {
     console.error("Error deleting theory:", error);
@@ -108,7 +100,3 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
-
-
-
-
