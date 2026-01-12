@@ -35,7 +35,7 @@ const AdminDashboard = () => {
 
         {/* Manage Topics */}
         <Link
-          to="/admin/manage-topics"
+          to="/admin/manage-theory"
           className="group bg-linear-to-tr from-purple-800 to-purple-900 rounded-3xl p-8 shadow-xl hover:shadow-purple-500/50 transform hover:scale-105 transition duration-300"
         >
           <FaBook className="text-5xl text-white mb-5 group-hover:text-pink-400 transition duration-300" />
