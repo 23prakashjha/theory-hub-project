@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 
+const API_BASE_URL = "https://theory-hub-project.onrender.com";
+
 const Signup = () => {
   const navigate = useNavigate();
 
@@ -9,16 +11,15 @@ const Signup = () => {
     name: "",
     email: "",
     password: "",
-    confirmPassword: ""
+    confirmPassword: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,38 +35,34 @@ const Signup = () => {
 
     try {
       const res = await axios.post(
-        "https://theory-hub-project.onrender.com/api/auth/signup", // ✅ correct endpoint
+        `${API_BASE_URL}/api/auth/signup`,
         {
           name: formData.name,
           email: formData.email,
-          password: formData.password
+          password: formData.password,
         },
-        {
-          headers: {
-            "Content-Type": "application/json"
-          }
-        }
+        { headers: { "Content-Type": "application/json" } }
       );
 
-      // ✅ Save user + token if needed
-      localStorage.setItem("user", JSON.stringify(res.data));
+      // Save token and user
+      localStorage.setItem("user", JSON.stringify(res.data.user));
       if (res.data.token) localStorage.setItem("token", res.data.token);
 
       setSuccess("Account created successfully 🎉");
 
       // Redirect after 1 second
       setTimeout(() => {
-        // Admin redirect
-        if (res.data.role === "Admin") {
-          navigate("/admin/dashboard");
-        } else {
-          navigate("/login");
-        }
+        const role = res.data.user.role.toLowerCase();
+        if (role === "admin") navigate("/admin/dashboard");
+        else navigate("/login");
       }, 1000);
-
     } catch (err) {
-      console.error("Signup Error:", err.response || err);
-      setError(err.response?.data?.message || "Signup failed. Try again.");
+      console.error("Signup Error:", err);
+      if (err.response) {
+        setError(err.response.data?.message || "Signup failed");
+      } else {
+        setError("Unable to reach server. Try again later.");
+      }
     } finally {
       setLoading(false);
     }
@@ -73,8 +70,7 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-gray-900 to-black px-4">
-      <div className="w-full max-w-md bg-gray-800/90 backdrop-blur rounded-2xl shadow-2xl p-8">
-
+      <div className="w-full max-w-md bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-2xl p-8">
         <h2 className="text-3xl font-bold text-center text-white mb-2">
           Create Account
         </h2>
@@ -83,19 +79,13 @@ const Signup = () => {
         </p>
 
         {error && (
-          <div className="mb-4 text-red-400 text-center font-semibold">
-            {error}
-          </div>
+          <div className="mb-4 text-red-400 text-center font-semibold">{error}</div>
         )}
-
         {success && (
-          <div className="mb-4 text-green-400 text-center font-semibold">
-            {success}
-          </div>
+          <div className="mb-4 text-green-400 text-center font-semibold">{success}</div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-
           <div>
             <label className="text-gray-300 text-sm">Full Name</label>
             <input
@@ -151,7 +141,6 @@ const Signup = () => {
           >
             {loading ? "Creating Account..." : "Register"}
           </button>
-
         </form>
 
         <p className="text-gray-400 text-sm text-center mt-6">
@@ -160,7 +149,6 @@ const Signup = () => {
             Login
           </Link>
         </p>
-
       </div>
     </div>
   );
