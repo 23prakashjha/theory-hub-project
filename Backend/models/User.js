@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: [true, "Email is required"],
-      unique: true,
+      unique: true, // ensures MongoDB uniqueness
       lowercase: true,
       trim: true,
       match: [
@@ -24,7 +24,7 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: [true, "Password is required"],
-      select: false, // 🔥 never return password by default
+      select: false, // 🔒 never return password by default
     },
 
     avatar: {
@@ -34,29 +34,29 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["User", "Admin"], // ✅ must match backend role checks
+      enum: ["User", "Admin"], // must match backend logic
       default: "User",
     },
 
     joined: {
-      type: Date, // store as proper Date object
-      default: Date.now, // ✅ fix default
+      type: Date, // store as Date object
+      default: Date.now, // automatically set current date
     },
 
     viewedLanguages: [
       {
-        _id: false, // prevents Mongo from creating extra _id for array items
+        _id: false, // prevents auto _id generation for sub-docs
         name: String,
         logo: String,
       },
     ],
   },
   {
-    timestamps: true, // createdAt & updatedAt auto
+    timestamps: true, // createdAt & updatedAt auto-managed
   }
 );
 
-// Ensure unique indexes are applied in MongoDB
+// Ensure email uniqueness at DB level
 userSchema.index({ email: 1 }, { unique: true });
 
 export default mongoose.model("User", userSchema);
