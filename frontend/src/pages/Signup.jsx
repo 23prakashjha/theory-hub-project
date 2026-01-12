@@ -44,9 +44,9 @@ const Signup = () => {
         { headers: { "Content-Type": "application/json" } }
       );
 
-      // Save token and user
+      // ✅ Save user + token
       localStorage.setItem("user", JSON.stringify(res.data.user));
-      if (res.data.token) localStorage.setItem("token", res.data.token);
+      localStorage.setItem("token", res.data.token);
 
       setSuccess("Account created successfully 🎉");
 
@@ -58,10 +58,16 @@ const Signup = () => {
       }, 1000);
     } catch (err) {
       console.error("Signup Error:", err);
+
       if (err.response) {
+        // Backend sent a clear error message
         setError(err.response.data?.message || "Signup failed");
+      } else if (err.request) {
+        // Request sent but no response
+        setError("Server did not respond. Try again later.");
       } else {
-        setError("Unable to reach server. Try again later.");
+        // Something else
+        setError("Unexpected error occurred. Try again.");
       }
     } finally {
       setLoading(false);
@@ -70,7 +76,7 @@ const Signup = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-gray-900 to-black px-4">
-      <div className="w-full max-w-md bg-gray-800/90 backdrop-blur-md rounded-2xl shadow-2xl p-8">
+      <div className="w-full max-w-md bg-gray-800/90 backdrop-blur-md rounded-3xl shadow-2xl p-8">
         <h2 className="text-3xl font-bold text-center text-white mb-2">
           Create Account
         </h2>
@@ -78,14 +84,11 @@ const Signup = () => {
           Join CodeTheory today 🚀
         </p>
 
-        {error && (
-          <div className="mb-4 text-red-400 text-center font-semibold">{error}</div>
-        )}
-        {success && (
-          <div className="mb-4 text-green-400 text-center font-semibold">{success}</div>
-        )}
+        {error && <div className="mb-4 text-red-400 text-center font-semibold">{error}</div>}
+        {success && <div className="mb-4 text-green-400 text-center font-semibold">{success}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+
           <div>
             <label className="text-gray-300 text-sm">Full Name</label>
             <input
@@ -94,7 +97,7 @@ const Signup = () => {
               required
               value={formData.name}
               onChange={handleChange}
-              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-green-500 outline-none transition"
             />
           </div>
 
@@ -106,7 +109,7 @@ const Signup = () => {
               required
               value={formData.email}
               onChange={handleChange}
-              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-green-500 outline-none transition"
             />
           </div>
 
@@ -118,7 +121,7 @@ const Signup = () => {
               required
               value={formData.password}
               onChange={handleChange}
-              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-green-500 outline-none transition"
             />
           </div>
 
@@ -130,7 +133,7 @@ const Signup = () => {
               required
               value={formData.confirmPassword}
               onChange={handleChange}
-              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-green-500 outline-none"
+              className="w-full mt-1 px-4 py-3 rounded-lg bg-gray-900 border border-gray-700 text-white focus:ring-2 focus:ring-green-500 outline-none transition"
             />
           </div>
 
@@ -141,6 +144,7 @@ const Signup = () => {
           >
             {loading ? "Creating Account..." : "Register"}
           </button>
+
         </form>
 
         <p className="text-gray-400 text-sm text-center mt-6">
@@ -155,3 +159,4 @@ const Signup = () => {
 };
 
 export default Signup;
+
