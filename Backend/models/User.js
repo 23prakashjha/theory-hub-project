@@ -1,4 +1,3 @@
-// models/User.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -6,8 +5,9 @@ const userSchema = new mongoose.Schema(
     name: {
       type: String,
       required: [true, "Name is required"],
-      trim: true,
+      trim: true
     },
+
     email: {
       type: String,
       required: [true, "Email is required"],
@@ -16,36 +16,41 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [
         /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-        "Please enter a valid email address",
-      ],
+        "Please enter a valid email address"
+      ]
     },
+
     password: {
       type: String,
       required: [true, "Password is required"],
+      select: false // 🔥 NEVER return password
     },
+
     avatar: {
       type: String,
-      default: "https://i.pravatar.cc/150?img=3", // Default avatar
+      default: "https://i.pravatar.cc/150?img=3"
     },
+
     role: {
       type: String,
-      enum: ["User", "Admin"],
-      default: "User",
+      enum: ["user", "admin"], // ✅ consistent
+      default: "user"
     },
+
     joined: {
       type: String,
-      default: new Date().toLocaleDateString(),
+      default: () => new Date().toLocaleDateString() // ✅ FIXED
     },
+
     viewedLanguages: [
       {
         name: String,
-        logo: String,
-      },
-    ],
+        logo: String
+      }
+    ]
   },
   { timestamps: true }
 );
 
-const User = mongoose.model("User", userSchema);
-export default User;
+export default mongoose.model("User", userSchema);
 

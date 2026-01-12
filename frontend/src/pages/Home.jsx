@@ -3,6 +3,9 @@ import { FaSearch, FaCode } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
+// ✅ API BASE URL
+const API_BASE_URL = "https://theory-hub-project.onrender.com";
+
 const Home = () => {
   const [languages, setLanguages] = useState([]);
   const [search, setSearch] = useState("");
@@ -21,12 +24,16 @@ const Home = () => {
     "from-sky-400 to-indigo-500",
   ];
 
+  // ---------------- FETCH LANGUAGES ----------------
   useEffect(() => {
     const fetchLanguages = async () => {
       try {
-        const res = await axios.get("https://theory-hub-project.onrender.com");
+        const res = await axios.get(
+          `${API_BASE_URL}/api/languages`,
+          { withCredentials: true }
+        );
 
-        const withGradients = res.data.map((lang, index) => ({
+        const withGradients = (res.data || []).map((lang, index) => ({
           ...lang,
           gradient: gradients[index % gradients.length],
         }));
@@ -42,12 +49,12 @@ const Home = () => {
     fetchLanguages();
   }, []);
 
+  // ---------------- SEARCH ----------------
   const filteredLanguages = languages.filter((lang) =>
     lang.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  /* ---------------- LOADING ---------------- */
-
+  // ---------------- LOADING ----------------
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-gray-400 animate-pulse">
@@ -56,14 +63,13 @@ const Home = () => {
     );
   }
 
-  /* ---------------- UI ---------------- */
-
+  // ---------------- UI ----------------
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-900 via-gray-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-black text-white">
 
       {/* 🌟 Hero */}
       <section className="text-center py-20 px-4">
-        <h1 className="text-4xl md:text-6xl font-extrabold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+        <h1 className="text-4xl md:text-6xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           Learn Programming & Frameworks
         </h1>
         <p className="max-w-3xl mx-auto text-gray-300 mt-4 text-lg">
@@ -80,7 +86,7 @@ const Home = () => {
             placeholder="Search language, framework, or tool..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 rounded-full bg-gray-800 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+            className="w-full pl-12 pr-4 py-3 rounded-full bg-gray-800 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>
@@ -96,7 +102,7 @@ const Home = () => {
             {filteredLanguages.map((lang) => (
               <div
                 key={lang._id}
-                className={`bg-linear-to-br ${lang.gradient} rounded-2xl shadow-xl hover:scale-105 transition duration-300`}
+                className={`bg-gradient-to-br ${lang.gradient} rounded-2xl shadow-xl hover:scale-105 transition duration-300`}
               >
                 <div className="p-6 text-center bg-gray-900/60 rounded-2xl h-full flex flex-col justify-between">
                   <div>
@@ -109,7 +115,8 @@ const Home = () => {
                     </h2>
 
                     <p className="text-gray-200 text-sm line-clamp-3">
-                      {lang.description || "Learn theory, syntax, and best practices."}
+                      {lang.description ||
+                        "Learn theory, syntax, and best practices."}
                     </p>
                   </div>
 

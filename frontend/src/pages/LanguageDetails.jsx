@@ -3,6 +3,9 @@ import { useParams } from "react-router-dom";
 import axios from "axios";
 import { FaBookOpen, FaCode } from "react-icons/fa";
 
+// ✅ API BASE URL
+const API_BASE_URL = "https://theory-hub-project.onrender.com";
+
 const LanguageDetails = () => {
   const { id } = useParams();
 
@@ -24,10 +27,17 @@ const LanguageDetails = () => {
         setError("");
 
         const [langRes, theoryRes] = await Promise.all([
-          axios.get(`https://theory-hub-project.onrender.com/${id}`),
-          axios.get("https://theory-hub-project.onrender.com", {
-            params: { languageId: id },
-          }),
+          axios.get(
+            `${API_BASE_URL}/api/languages/${id}`,
+            { withCredentials: true }
+          ),
+          axios.get(
+            `${API_BASE_URL}/api/theory`,
+            {
+              params: { languageId: id },
+              withCredentials: true,
+            }
+          ),
         ]);
 
         setLanguage(langRes.data);
@@ -43,7 +53,7 @@ const LanguageDetails = () => {
     fetchData();
   }, [id]);
 
-  /* -------------------- STATES -------------------- */
+  /* ---------------- LOADING ---------------- */
 
   if (loading) {
     return (
@@ -52,6 +62,8 @@ const LanguageDetails = () => {
       </div>
     );
   }
+
+  /* ---------------- ERROR ---------------- */
 
   if (error) {
     return (
@@ -69,14 +81,14 @@ const LanguageDetails = () => {
     );
   }
 
-  /* -------------------- UI -------------------- */
+  /* ---------------- UI ---------------- */
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-900 via-slate-900 to-black text-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-black text-white">
 
-      {/* 🔥 Hero Section */}
+      {/* 🔥 Hero */}
       <section className="py-16 px-6 text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold bg-linear-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+        <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
           {language.name}
         </h1>
         <p className="max-w-3xl mx-auto text-gray-300 mt-4 text-lg">
@@ -84,7 +96,7 @@ const LanguageDetails = () => {
         </p>
       </section>
 
-      {/* 📚 Theory Section */}
+      {/* 📚 Theory */}
       <section className="max-w-6xl mx-auto px-4 pb-20">
         {topics.length === 0 ? (
           <p className="text-center text-gray-400">
@@ -95,11 +107,11 @@ const LanguageDetails = () => {
             {topics.map((topic) => (
               <div
                 key={topic._id}
-                className="bg-gray-800 rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-blue-500/20 transition duration-300"
+                className="bg-gray-800 rounded-2xl p-6 md:p-8 shadow-lg hover:shadow-blue-500/20 transition"
               >
                 {/* Title */}
                 <div className="flex items-center gap-3 mb-4">
-                  <FaBookOpen className="text-blue-400 text-xl shrink-0" />
+                  <FaBookOpen className="text-blue-400 text-xl" />
                   <h2 className="text-2xl font-bold">
                     {topic.title}
                   </h2>
@@ -110,9 +122,9 @@ const LanguageDetails = () => {
                   {topic.content}
                 </p>
 
-                {/* Code Example (if exists) */}
+                {/* Code Example */}
                 {topic.codeExample && (
-                  <div className="mt-4">
+                  <div>
                     <div className="flex items-center gap-2 mb-2 text-gray-400 text-sm">
                       <FaCode />
                       Code Example
@@ -132,3 +144,4 @@ const LanguageDetails = () => {
 };
 
 export default LanguageDetails;
+
