@@ -6,28 +6,62 @@ const API_BASE_URL = "https://theory-hub-project.onrender.com";
 const ManageTheory = () => {
   const [theories, setTheories] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/api/theory`)
-      .then((res) => res.json())
-      .then((data) => {
-        setTheories(data);
-        setLoading(false);
-      })
-      .catch((err) => {
+    const fetchTheory = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/theory`);
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`API ${res.status}: ${text}`);
+        }
+
+        const data = await res.json();
+        console.log("Theory API Response:", data);
+
+        /**
+         * HANDLE ALL POSSIBLE BACKEND RESPONSES
+         */
+        if (Array.isArray(data)) {
+          setTheories(data);
+        } else if (Array.isArray(data.theory)) {
+          setTheories(data.theory);
+        } else if (Array.isArray(data.data)) {
+          setTheories(data.data);
+        } else {
+          setTheories([]); // fallback
+        }
+      } catch (err) {
         console.error(err);
+        setError("Failed to load theory data (Bad API request)");
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchTheory();
   }, []);
 
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this theory?")) return;
 
-    await fetch(`${API_BASE_URL}/api/theory/${id}`, {
-      method: "DELETE",
-    });
+    try {
+      const res = await fetch(
+        `${API_BASE_URL}/api/theory/${id}`,
+        { method: "DELETE" }
+      );
 
-    setTheories(theories.filter((t) => t._id !== id));
+      if (!res.ok) {
+        throw new Error("Delete API failed");
+      }
+
+      setTheories((prev) => prev.filter((t) => t._id !== id));
+    } catch (err) {
+      console.error(err);
+      alert("Delete failed. Backend rejected request.");
+    }
   };
 
   if (loading) {
@@ -50,38 +84,51 @@ const ManageTheory = () => {
         </p>
       </header>
 
+      {error && (
+        <p className="text-red-500 text-center mb-6">{error}</p>
+      )}
+
       {/* Theory Grid */}
       <section className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {theories.map((theory) => (
-          <div
-            key={theory._id}
-            className="group bg-linear-to-tr from-slate-800 to-slate-900 rounded-3xl p-6 shadow-xl hover:shadow-purple-500/40 transition transform hover:-translate-y-1"
-          >
-            <FaBookOpen className="text-4xl text-purple-400 mb-4 group-hover:text-pink-400 transition" />
+        {theories.length === 0 && !error && (
+          <p className="col-span-full text-center text-gray-400">
+            No theory found.
+          </p>
+        )}
 
-            <h2 className="text-xl font-bold mb-1 group-hover:text-pink-400 transition">
-              {theory.title}
-            </h2>
+        {Array.isArray(theories) &&
+          theories.map((theory) => (
+            <div
+              key={theory._id}
+              className="group bg-linear-to-tr from-slate-800 to-slate-900 rounded-3xl p-6 shadow-xl hover:shadow-purple-500/40 transition transform hover:-translate-y-1"
+            >
+              <FaBookOpen className="text-4xl text-purple-400 mb-4" />
 
-            <p className="text-gray-400 mb-6">
-              Language: <span className="text-white">{theory.language}</span>
-            </p>
+              <h2 className="text-xl font-bold mb-1">
+                {theory.title || "Untitled"}
+              </h2>
 
-            {/* Actions */}
-            <div className="flex gap-4">
-              <button className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 py-2 rounded-xl transition">
-                <FaEdit /> Edit
-              </button>
+              <p className="text-gray-400 mb-6">
+                Language:{" "}
+                <span className="text-white">
+                  {theory.language || "N/A"}
+                </span>
+              </p>
 
-              <button
-                onClick={() => handleDelete(theory._id)}
-                className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 py-2 rounded-xl transition"
-              >
-                <FaTrash /> Delete
-              </button>
+              <div className="flex gap-4">
+                <button className="flex-1 bg-blue-600 hover:bg-blue-700 py-2 rounded-xl">
+                  <FaEdit className="inline mr-2" /> Edit
+                </button>
+
+                <button
+                  onClick={() => handleDelete(theory._id)}
+                  className="flex-1 bg-red-600 hover:bg-red-700 py-2 rounded-xl"
+                >
+                  <FaTrash className="inline mr-2" /> Delete
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </section>
     </div>
   );
