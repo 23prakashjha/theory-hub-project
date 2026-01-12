@@ -18,9 +18,8 @@ router.post("/signup", async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password)
       return sendError(res, 400, "All fields are required");
-    }
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -29,19 +28,16 @@ router.post("/signup", async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user (default role "user")
+    // Create user (default role "User" with uppercase to match enum)
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: "user",
+      role: "User",
     });
 
-    // Ensure JWT_SECRET is set
-    if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is missing in .env");
-      return sendError(res, 500, "Server configuration error");
-    }
+    if (!process.env.JWT_SECRET)
+      return sendError(res, 500, "Server configuration error: JWT_SECRET missing");
 
     // Generate JWT token
     const token = jwt.sign(
@@ -69,9 +65,8 @@ router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
+    if (!email || !password)
       return sendError(res, 400, "Email and password are required");
-    }
 
     // Select password explicitly because schema has select: false
     const user = await User.findOne({ email }).select("+password");
@@ -80,10 +75,8 @@ router.post("/login", async (req, res) => {
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return sendError(res, 400, "Invalid credentials");
 
-    if (!process.env.JWT_SECRET) {
-      console.error("JWT_SECRET is missing in .env");
-      return sendError(res, 500, "Server configuration error");
-    }
+    if (!process.env.JWT_SECRET)
+      return sendError(res, 500, "Server configuration error: JWT_SECRET missing");
 
     const token = jwt.sign(
       { id: user._id, role: user.role },
