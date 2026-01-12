@@ -11,9 +11,10 @@ import About from "./components/About";
 import LanguageDetails from "./pages/LanguageDetails";
 import AdminDashboard from "./pages/AdminDashboard";
 import AddTheory from "./pages/AddTheory";
+import ManageTheory from "./pages/ManageTheory";
+import ManageLanguages from "./pages/ManageLanguages";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
-
 
 const App = () => {
   return (
@@ -23,7 +24,7 @@ const App = () => {
         {/* Navbar */}
         <Navbar />
 
-        {/* Main content */}
+        {/* Main Content */}
         <main className="grow">
           <Routes>
 
@@ -36,11 +37,11 @@ const App = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
 
-            
-
             {/* Admin */}
             <Route path="/admin" element={<AdminDashboard />} />
             <Route path="/admin/add-theory" element={<AddTheory />} />
+            <Route path="/admin/manage-theory" element={<ManageTheory />} />
+            <Route path="/admin/manage-languages" element={<ManageLanguages />} />
 
           </Routes>
         </main>
