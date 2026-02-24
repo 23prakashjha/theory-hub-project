@@ -1,3 +1,5 @@
+https://github.com/23prakashjha/theory-hub-project/blob/c63699fbf1bcc07d5b1f45f82e6b7d92718d3111/theory.PNG
+
 Theory Hub- is a comprehensive platform for learning programming languages and frameworks. It provides theory, examples, and interactive code snippets for modern technologies. Users can register, log in, and explore programming concepts, while admins can manage content and users securely.
 
 ✨ Project Overview
