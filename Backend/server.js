@@ -2,17 +2,22 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import connectDB from "./config/db.js";
+import { initStorage } from "./services/storageService.js";
+import { uploadsConfig } from "./config/env.js";
 
 // Routes
-import authRoutes from "./routes/authRoutes.js";
-import languageRoutes from "./routes/languageRoutes.js";
-import theoryRoutes from "./routes/theoryRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import documentRoutes from "./routes/documentRoutes.js";
 
 dotenv.config();
 
 // Connect to MongoDB
 connectDB();
+
+// Create the uploads directory tree so PDF storage works on a cold start
+initStorage()
+  .then(() => console.log("📁 Upload storage ready"))
+  .catch((err) => console.error("⚠️  Upload storage unavailable:", err.message));
 
 const app = express();
 
@@ -24,7 +29,10 @@ app.use(express.json());
 // ✅ FIXED CORS CONFIG (LOCAL + PRODUCTION)
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://theory-hub-project.vercel.app"
+  "http://127.0.0.1:5173",
+  "http://localhost:4173",
+  "https://theory-hub-project.vercel.app",
+  "https://theory-hub-project.onrender.com"
 ];
 
 app.use(
@@ -38,7 +46,8 @@ app.use(
       }
     },
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+    allowedHeaders: ["Content-Type", "Authorization", "X-Device-Id"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
   })
 );
 
@@ -46,17 +55,31 @@ app.use(
 app.options("*", cors());
 
 // Serve static files
-app.use("/uploads", express.static("uploads"));
+// Absolute path so uploaded PDFs resolve regardless of the shell's cwd.
+app.use("/uploads", express.static(uploadsConfig.dir));
 
 // -------------------- Routes --------------------
-app.use("/api/auth", authRoutes);
-app.use("/api/languages", languageRoutes);
-app.use("/api/theory", theoryRoutes);
 app.use("/api/users", userRoutes);
+
+// -------------------- PDF documents --------------------
+app.use("/api/documents", documentRoutes);
 
 // Health check
 app.get("/", (req, res) => {
   res.send("CodeTheory API Running...");
+});
+
+// Feature status: is the upload dir writable?
+app.get("/api/health", async (req, res) => {
+  const storageReady = await initStorage()
+    .then(() => true)
+    .catch(() => false);
+
+  res.json({
+    status: "ok",
+    storage: storageReady ? "ready" : "unavailable",
+    uptimeSeconds: Math.round(process.uptime()),
+  });
 });
 
 // -------------------- Error Handling --------------------

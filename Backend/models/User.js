@@ -1,29 +1,41 @@
 // models/User.js
+// There is no login. Each browser is issued a stable device id (see
+// middleware/identify.js) and gets exactly one lightweight User behind it, so
+// documents, notes and interview sessions stay scoped per browser without
+// ever asking anyone for a name, an email or a password.
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
   {
-    name: {
+    // Stable id for this browser, assigned on first contact. Absent on any
+    // pre-existing account rows, so the index stays sparse.
+    deviceId: {
       type: String,
-      required: [true, "Name is required"],
       trim: true,
+      default: undefined,
+      index: { unique: true, sparse: true },
     },
 
+    name: {
+      type: String,
+      trim: true,
+      default: "Guest",
+    },
+
+    // Anonymous visitors get a synthetic address derived from their device id.
+    // It exists only to satisfy the unique index, and is never displayed.
     email: {
       type: String,
       required: [true, "Email is required"],
       unique: true, // ensures MongoDB uniqueness
       lowercase: true,
       trim: true,
-      match: [
-        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
-        "Please enter a valid email address",
-      ],
     },
 
+    // Optional: anonymous users never have one.
     password: {
       type: String,
-      required: [true, "Password is required"],
+      default: undefined,
       select: false, // 🔒 never return password by default
     },
 
@@ -42,21 +54,10 @@ const userSchema = new mongoose.Schema(
       type: Date, // store as Date object
       default: Date.now, // automatically set current date
     },
-
-    viewedLanguages: [
-      {
-        _id: false, // prevents auto _id generation for sub-docs
-        name: String,
-        logo: String,
-      },
-    ],
   },
   {
     timestamps: true, // createdAt & updatedAt auto-managed
   }
 );
-
-// Ensure email uniqueness at DB level
-userSchema.index({ email: 1 }, { unique: true });
 
 export default mongoose.model("User", userSchema);
