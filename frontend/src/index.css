@@ -1,1 +1,351 @@
 @import "tailwindcss";
+
+/* ==========================================================================
+   CodeTheory — Design System
+   Tailwind v4 CSS-first theme. Everything below is consumed as utilities,
+   e.g. `bg-ink-900`, `text-brand-300`, `font-display`, `animate-float`.
+   ========================================================================== */
+
+@theme {
+  /* ---- Typography ---------------------------------------------------- */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Space Grotesk", "Plus Jakarta Sans", ui-sans-serif, system-ui,
+    sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas,
+    monospace;
+
+  /* ---- Surface ramp (dark, blue-black) -------------------------------- */
+  --color-ink-950: #04060e;
+  --color-ink-900: #080b16;
+  --color-ink-850: #0b1020;
+  --color-ink-800: #10162a;
+  --color-ink-750: #161d35;
+  --color-ink-700: #1d2542;
+  --color-ink-600: #2a3358;
+  --color-ink-500: #3b4570;
+
+  /* ---- Brand (indigo / violet) ---------------------------------------- */
+  --color-brand-50: #eef1ff;
+  --color-brand-100: #e0e5ff;
+  --color-brand-200: #c6cffe;
+  --color-brand-300: #a3adfd;
+  --color-brand-400: #8184fb;
+  --color-brand-500: #6666f5;
+  --color-brand-600: #5046ea;
+  --color-brand-700: #4335d1;
+  --color-brand-800: #372cab;
+  --color-brand-900: #312a8b;
+  --color-brand-950: #1d1a52;
+
+  /* ---- Accents -------------------------------------------------------- */
+  --color-aqua-200: #bae6fd;
+  --color-aqua-300: #7dd3fc;
+  --color-aqua-400: #38bdf8;
+  --color-aqua-500: #0ea5e9;
+  --color-aqua-600: #0284c7;
+
+  --color-mint-300: #6ee7b7;
+  --color-mint-400: #34d399;
+  --color-mint-500: #10b981;
+  --color-mint-600: #059669;
+
+  --color-gold-300: #fcd34d;
+  --color-gold-400: #fbbf24;
+  --color-gold-500: #f59e0b;
+
+  --color-rose-ink: #fb7185;
+
+  /* ---- Elevation ------------------------------------------------------ */
+  --shadow-soft: 0 1px 0 0 rgb(255 255 255 / 0.05) inset,
+    0 18px 40px -24px rgb(0 0 0 / 0.9);
+  --shadow-lift: 0 1px 0 0 rgb(255 255 255 / 0.07) inset,
+    0 28px 60px -28px rgb(0 0 0 / 0.95);
+  --shadow-brand: 0 18px 50px -22px rgb(102 102 245 / 0.75);
+
+  /* ---- Motion --------------------------------------------------------- */
+  --animate-float: float 7s ease-in-out infinite;
+  --animate-drift: drift 20s ease-in-out infinite alternate;
+  --animate-aurora: aurora 24s ease-in-out infinite alternate;
+  --animate-shimmer: shimmer 2.4s linear infinite;
+  --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-marquee: marquee 38s linear infinite;
+  --animate-spin-slow: spin 16s linear infinite;
+  --animate-sheen: sheen 2.6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -16px, 0);
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(6%, -8%, 0) scale(1.18);
+  }
+}
+
+@keyframes aurora {
+  from {
+    transform: translate3d(-6%, 0, 0) rotate(-6deg);
+  }
+  to {
+    transform: translate3d(6%, -5%, 0) rotate(6deg);
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 20px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes sheen {
+  0% {
+    transform: translate3d(-120%, 0, 0);
+  }
+  60%,
+  100% {
+    transform: translate3d(220%, 0, 0);
+  }
+}
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-ink-950 font-sans text-slate-400 antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-white;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background: rgb(102 102 245 / 0.4);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-400);
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  /* Scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-700) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-ink-700);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-ink-600);
+    background-clip: content-box;
+  }
+
+  /* Native select dropdowns on a dark canvas */
+  select option {
+    background-color: var(--color-ink-850);
+    color: #fff;
+  }
+
+  input[type="file"] {
+    color-scheme: dark;
+  }
+}
+
+/* ==========================================================================
+   Custom utilities
+   ========================================================================== */
+
+/* Frosted panel — the app's primary surface treatment. */
+@utility glass {
+  background-image: linear-gradient(
+    180deg,
+    rgb(255 255 255 / 0.07),
+    rgb(255 255 255 / 0.02)
+  );
+  border: 1px solid rgb(255 255 255 / 0.08);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* Denser variant for nav bars. */
+@utility glass-nav {
+  background-image: linear-gradient(
+    180deg,
+    rgb(8 11 22 / 0.85),
+    rgb(4 6 14 / 0.75)
+  );
+  border-bottom: 1px solid rgb(255 255 255 / 0.07);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+}
+
+/* Gradient text, with a soft second layer for depth. */
+@utility gradient-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-white) 0%,
+    var(--color-brand-200) 38%,
+    var(--color-aqua-300) 72%,
+    var(--color-brand-300) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@utility gradient-brand-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--color-brand-300),
+    var(--color-aqua-300)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Hero / section grid backdrop. */
+@utility grid-backdrop {
+  background-image: linear-gradient(
+      to right,
+      rgb(255 255 255 / 0.055) 1px,
+      transparent 1px
+    ),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.055) 1px, transparent 1px);
+  background-size: 56px 56px;
+  background-position: center;
+}
+
+/* Dot matrix backdrop. */
+@utility dot-backdrop {
+  background-image: radial-gradient(
+    circle at center,
+    rgb(255 255 255 / 0.09) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+
+/* Hides scrollbars without losing scrolling. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* A hairline that fades out at both ends. */
+@utility rule-fade {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.14) 20%,
+    rgb(255 255 255 / 0.14) 80%,
+    transparent
+  );
+}
+
+/* ==========================================================================
+   Reduced motion
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

@@ -23,7 +23,14 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      // ESLint does not parse JSX, so anything rendered as <Foo /> looks
+      // unused. Capitalised bindings are therefore always treated as used —
+      // for variables (imports) and for destructured function parameters.
+      'no-unused-vars': ['error', {
+        varsIgnorePattern: '^[A-Z_]',
+        argsIgnorePattern: '^[A-Z_]',
+        caughtErrorsIgnorePattern: '^[A-Z_]',
+      }],
     },
   },
 ])
