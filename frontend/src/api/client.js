@@ -36,6 +36,11 @@ const readDeviceId = () => {
 
 const deviceId = readDeviceId();
 
+// Exported for the media download flow: the finished file is fetched by a plain
+// <a href> navigation, which cannot carry the X-Device-Id header, so that route
+// is addressed with the id as a query parameter instead.
+export { deviceId };
+
 const api = axios.create({ baseURL: API_BASE_URL });
 
 // Attach the device id to every request.

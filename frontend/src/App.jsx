@@ -16,6 +16,10 @@ import Home from "./pages/Home";
 import About from "./pages/About";
 import Library from "./pages/Library";
 import AdminDashboard from "./pages/AdminDashboard";
+import Downloader from "./pages/Downloader";
+import History from "./pages/History";
+import Pricing from "./pages/Pricing";
+import Contact from "./pages/Contact";
 
 /** Route changes should land at the top, unless the link targets an anchor. */
 const ScrollToTop = () => {
@@ -70,6 +74,10 @@ const App = () => (
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} />
           <Route path="/library" element={<Library />} />
+          <Route path="/downloader" element={<Downloader />} />
+          <Route path="/history" element={<History />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/contact" element={<Contact />} />
           <Route path="/admin" element={<AdminDashboard />} />
           {/* Removed pages redirect home instead of rendering a blank view. */}
           <Route path="*" element={<Navigate to="/" replace />} />

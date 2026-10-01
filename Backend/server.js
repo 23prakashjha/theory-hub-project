@@ -8,6 +8,8 @@ import { uploadsConfig } from "./config/env.js";
 // Routes
 import userRoutes from "./routes/userRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
+import mediaRoutes from "./routes/mediaRoutes.js";
+import { isYtDlpAvailable } from "./services/mediaService.js";
 
 dotenv.config();
 
@@ -60,9 +62,13 @@ app.use("/uploads", express.static(uploadsConfig.dir));
 
 // -------------------- Routes --------------------
 app.use("/api/users", userRoutes);
-
 // -------------------- PDF documents --------------------
+
 app.use("/api/documents", documentRoutes);
+
+// -------------------- Media downloads --------------------
+
+app.use("/api/media", mediaRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -102,4 +108,13 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on port ${PORT}`)
+);
+
+// yt-dlp drives the media downloader. It is an external binary rather than an
+// npm dependency, so report its state loudly instead of failing at request time.
+console.log(
+  isYtDlpAvailable()
+    ? "🎬 yt-dlp found — media downloads enabled"
+    : "⚠️  yt-dlp NOT found — /api/media/info will reject non-direct URLs.\n" +
+        "   Install it with: winget install yt-dlp  (or: pip install yt-dlp)"
 );

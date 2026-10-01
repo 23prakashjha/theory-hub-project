@@ -23,6 +23,8 @@ const COLUMNS = [
     links: [
       { label: "Home", to: "/" },
       { label: "My Library", to: "/library" },
+      { label: "Media Grab", to: "/downloader" },
+      { label: "Download History", to: "/history" },
       { label: "Quiz Practice", href: QUIZ_URL },
       { label: "Dashboard", to: "/admin" },
     ],
@@ -33,6 +35,8 @@ const COLUMNS = [
       { label: "About us", to: "/about" },
       { label: "Our team", to: "/about#team" },
       { label: "What learners say", to: "/about#testimonials" },
+      { label: "Pricing", to: "/pricing" },
+      { label: "Contact", to: "/contact" },
     ],
   },
 ];
