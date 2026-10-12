@@ -52,8 +52,12 @@ const STALL_WINDOW_MS = Number(process.env.MEDIA_STALL_WINDOW_MS) || 2 * 60 * 10
 const MAX_STALL_RECOVERIES = 8;
 
 /* Clients that bypass YouTube's "Sign in to confirm you're not a bot" without
-   cookies. Tried in order after the default client fails. */
-const YT_FALLBACK_CLIENTS = ["android", "ios", "tv", "web_embedded", "mweb"];
+   cookies. Tried in order after the default client fails.
+ *
+ * This list has to track what yt-dlp actually supports: YouTube retires player
+ * clients every few months, and passing a dead client just burns a retry. `ios`
+ * and `macos` were removed in yt-dlp 2026.08, so they are gone here. */
+const YT_FALLBACK_CLIENTS = ["android", "web_safari", "tv", "web_embedded", "mweb"];
 
 const DIRECT_EXTENSIONS = new Set([
   ".mp4", ".webm", ".mkv", ".mov", ".avi", ".flv", ".m4v", ".wmv", ".ts",
@@ -262,6 +266,55 @@ export function mediaCapabilities() {
     ytdlp: isYtDlpAvailable(),
     ffmpeg: isFfmpegAvailable(),
   };
+}
+
+let ytDlpRefreshStarted = false;
+
+/**
+ * Nudge the vendored yt-dlp towards the latest stable release.
+ *
+ * YouTube changes its player every few weeks, and "Failed to extract any player
+ * response" is almost always a stale extractor rather than a bad link. The only
+ * real fix is a newer yt-dlp, so refresh once per process, in the background:
+ * a deployment that was offline when it was built repairs itself on restart.
+ *
+ * Non-fatal by design — if GitHub is unreachable or the binary is not
+ * self-updatable, the copy already on disk keeps working.
+ *
+ *   YTDLP_AUTO_UPDATE=false   never self-update
+ *   YTDLP_AUTO_UPDATE=true    also update a yt-dlp we do not own (e.g. on PATH)
+ */
+export function refreshYtDlp() {
+  if (ytDlpRefreshStarted) return;
+  ytDlpRefreshStarted = true;
+
+  if (process.env.YTDLP_AUTO_UPDATE === "false") return;
+
+  const binary = findYtDlp();
+  if (!binary) return;
+
+  // Only rewrite a binary this project fetched itself. A yt-dlp owned by a
+  // package manager must not be replaced behind the user's back, so that case
+  // needs an explicit YTDLP_AUTO_UPDATE=true.
+  const owned = path.resolve(binary).startsWith(path.resolve(VENDOR_DIR) + path.sep);
+  if (!owned && process.env.YTDLP_AUTO_UPDATE !== "true") return;
+
+  let proc;
+  try {
+    proc = spawn(binary, ["--update-to", "stable", "--no-warnings"], { stdio: "ignore" });
+  } catch {
+    return;
+  }
+
+  // An update that hangs must never take the host with it.
+  const timer = setTimeout(() => killProcessTree(proc), 90 * 1000);
+  timer.unref?.();
+
+  proc.on("error", () => clearTimeout(timer));
+  proc.on("close", (code) => {
+    clearTimeout(timer);
+    if (code === 0) console.log("🎬 yt-dlp refreshed to the latest stable release");
+  });
 }
 
 /* -------------------------------------------------------------- URL safety */

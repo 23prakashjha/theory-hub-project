@@ -9,7 +9,7 @@ import { uploadsConfig } from "./config/env.js";
 import userRoutes from "./routes/userRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import mediaRoutes from "./routes/mediaRoutes.js";
-import { mediaCapabilities } from "./services/mediaService.js";
+import { mediaCapabilities, refreshYtDlp } from "./services/mediaService.js";
 
 dotenv.config();
 
@@ -122,3 +122,7 @@ console.log(
         "   This is normally installed by `npm install`; re-run it in Backend/,\n" +
         "   or set YTDLP_PATH to an existing yt-dlp binary."
 );
+
+// Pull the latest stable yt-dlp in the background. YouTube breaks older
+// extractors every few weeks, so a stale build should heal itself on restart.
+if (ytdlp) refreshYtDlp();
