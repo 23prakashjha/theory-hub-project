@@ -1,5 +1,8 @@
 .env
 
+# Dependencies
+node_modules/
+
 # Uploaded PDFs
 uploads/
 
