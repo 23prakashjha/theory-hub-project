@@ -55,9 +55,10 @@ const MAX_STALL_RECOVERIES = 8;
    cookies. Tried in order after the default client fails.
  *
  * This list has to track what yt-dlp actually supports: YouTube retires player
- * clients every few months, and passing a dead client just burns a retry. `ios`
- * and `macos` were removed in yt-dlp 2026.08, so they are gone here. */
-const YT_FALLBACK_CLIENTS = ["android", "web_safari", "tv", "web_embedded", "mweb"];
+ * clients every few months, and passing a dead client just burns a retry. As of
+ * yt-dlp 2026.08, `ios`/`macos` are gone and `web_safari`/`tv` no longer clear
+ * the bot check — `tv_embedded`, `mweb`, `android_vr` and `web_embedded` do. */
+const YT_FALLBACK_CLIENTS = ["tv_embedded", "mweb", "android_vr", "web_embedded", "android"];
 
 const DIRECT_EXTENSIONS = new Set([
   ".mp4", ".webm", ".mkv", ".mov", ".avi", ".flv", ".m4v", ".wmv", ".ts",
@@ -79,8 +80,15 @@ let cookieArgsCache = null;
 const VENDOR_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "vendor");
 
 /**
- * yt-dlp args that pass cookies, so age/region-restricted and "confirm you're
- * not a bot" requests succeed.
+ * A cookies.txt dropped next to the backend is picked up automatically, so the
+ * usual fix — export YouTube cookies — needs no .env edit. (Ignore this file in
+ * git; it is a live session and must never be committed.)
+ */
+const AUTO_COOKIE_FILE = path.join(VENDOR_DIR, "..", "cookies.txt");
+
+/**
+ * yt-dlp args that authenticate the request, so age/region-restricted and
+ * "confirm you're not a bot" links succeed.
  *
  * Configure via .env:
  *   YTDLP_COOKIES_FILE      path to a Netscape-format cookies.txt
@@ -90,7 +98,8 @@ function cookieArgs() {
   if (cookieArgsCache) return cookieArgsCache;
 
   const args = [];
-  const cookiesFile = process.env.YTDLP_COOKIES_FILE;
+  const cookiesFile =
+    process.env.YTDLP_COOKIES_FILE || firstExisting([AUTO_COOKIE_FILE]);
   const browser = process.env.YTDLP_COOKIES_BROWSER;
 
   if (cookiesFile) args.push("--cookies", cookiesFile);
@@ -98,6 +107,34 @@ function cookieArgs() {
 
   cookieArgsCache = args;
   return args;
+}
+
+/**
+ * Everything that shapes the network identity of a request: cookies plus, when
+ * configured, a proxy. A residential proxy (YTDLP_PROXY) is the reliable cure
+ * for "Sign in to confirm you're not a bot" on a datacenter host, where no
+ * browser session is available to borrow.
+ */
+function networkArgs() {
+  const args = [...cookieArgs()];
+  if (process.env.YTDLP_PROXY) args.push("--proxy", process.env.YTDLP_PROXY);
+  return args;
+}
+
+/* Browsers to borrow a signed-in YouTube session from, best guess first. */
+const FALLBACK_BROWSERS = ["chrome", "edge", "firefox", "brave"];
+
+/**
+ * Browser-cookie strategies to try only after every explicit method has failed.
+ *
+ * Empty when a cookie source is already configured (it was used from the
+ * start), so this never duplicates work. On a server there is no browser, so
+ * each attempt fails immediately and nothing changes.
+ */
+function browserCookieFallbacks() {
+  if (process.env.YTDLP_COOKIES_FILE || process.env.YTDLP_COOKIES_BROWSER) return [];
+  if (firstExisting([AUTO_COOKIE_FILE])) return [];
+  return FALLBACK_BROWSERS;
 }
 
 const playerClientArgs = (clients) => [
@@ -605,11 +642,12 @@ function buildQualityFormats(info) {
 function inspectWithYtDlp(binary, url) {
   const clientSets = [["default"], YT_FALLBACK_CLIENTS];
 
-  const runOnce = (clients) =>
+  const runOnce = (clients, extraArgs = []) =>
     new Promise((resolve, reject) => {
       const args = [
         ...playerClientArgs(clients),
-        ...cookieArgs(),
+        ...networkArgs(),
+        ...extraArgs,
         "--dump-single-json",
         "--no-playlist",
         "--skip-download",
@@ -646,11 +684,22 @@ function inspectWithYtDlp(binary, url) {
       }
     }
 
+    // Last resort: borrow a logged-in browser's YouTube session. This is what
+    // makes "Sign in to confirm you're not a bot" clear on a personal machine.
+    for (const browser of browserCookieFallbacks()) {
+      try {
+        return await runOnce(["default"], ["--cookies-from-browser", browser]);
+      } catch (err) {
+        lastError = err;
+      }
+    }
+
     throw new Error(
       `${lastError?.message || "Could not read that link."} ` +
-        "For a YouTube link that needs sign-in or an age check, set " +
-        "YTDLP_COOKIES_FILE to a cookies.txt path (or YTDLP_COOKIES_BROWSER) " +
-        "in the server environment and restart it."
+        "YouTube is asking this server to prove it is not a bot. Fixes, in order: " +
+        "set YTDLP_COOKIES_FILE to a cookies.txt exported from a signed-in YouTube " +
+        "session, set YTDLP_COOKIES_BROWSER to a browser installed on this machine, " +
+        "or set YTDLP_PROXY to a residential proxy, then restart the server."
     );
   })();
 }
@@ -1054,12 +1103,23 @@ async function downloadWithYtDlp({ url, formatId }, task, outTemplate) {
     }
   }
 
-  const clientSets = [["default"], YT_FALLBACK_CLIENTS];
+  // Strategies, in order: default clients, the broader client set, then
+  // borrowing browser cookies. Each strategy is retried across the format
+  // attempts above, and its .part file is reused, so a retry resumes.
+  const strategies = [
+    { clients: ["default"], extra: [] },
+    { clients: YT_FALLBACK_CLIENTS, extra: [] },
+    ...browserCookieFallbacks().map((browser) => ({
+      clients: ["default"],
+      extra: ["--cookies-from-browser", browser],
+    })),
+  ];
 
-  const tryNext = async (attemptIndex, clientIndex) => {
+  const tryNext = async (attemptIndex, strategyIndex) => {
     if (task.stalled) throw new Error(task.error || "Download stalled.");
     if (attemptIndex >= attempts.length) throw new Error("The download could not be completed.");
 
+    const strategy = strategies[strategyIndex];
     const baseArgs = ["--no-playlist", "--no-mtime", "--no-warnings", ...RESILIENCE_ARGS];
 
     const ffmpegLocationArg = findFfmpegLocation();
@@ -1067,7 +1127,7 @@ async function downloadWithYtDlp({ url, formatId }, task, outTemplate) {
       baseArgs.push("--ffmpeg-location", ffmpegLocationArg);
     }
 
-    baseArgs.push(...cookieArgs(), ...playerClientArgs(clientSets[clientIndex]));
+    baseArgs.push(...networkArgs(), ...playerClientArgs(strategy.clients), ...strategy.extra);
 
     const args = [...baseArgs, ...attempts[attemptIndex].args, "-o", outTemplate, url];
 
@@ -1085,7 +1145,7 @@ async function downloadWithYtDlp({ url, formatId }, task, outTemplate) {
         return;
       }
 
-      if (clientIndex + 1 < clientSets.length) return tryNext(attemptIndex, clientIndex + 1);
+      if (strategyIndex + 1 < strategies.length) return tryNext(attemptIndex, strategyIndex + 1);
       return tryNext(attemptIndex + 1, 0);
     }
 
@@ -1096,7 +1156,7 @@ async function downloadWithYtDlp({ url, formatId }, task, outTemplate) {
       return;
     }
 
-    if (clientIndex + 1 < clientSets.length) return tryNext(attemptIndex, clientIndex + 1);
+    if (strategyIndex + 1 < strategies.length) return tryNext(attemptIndex, strategyIndex + 1);
     return tryNext(attemptIndex + 1, 0);
   };
 

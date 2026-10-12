@@ -28,3 +28,7 @@ Thumbs.db
 # Uploads / vendored binaries (fetched by Backend/scripts/vendor-ytdlp.mjs)
 Backend/uploads/
 Backend/vendor/
+
+# Exported YouTube session cookies — a live credential, never commit it
+cookies.txt
+Backend/cookies.txt
