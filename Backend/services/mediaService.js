@@ -19,6 +19,7 @@ import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import dns from "node:dns/promises";
 import { createRequire } from "node:module";
@@ -86,12 +87,49 @@ const VENDOR_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..",
  */
 const AUTO_COOKIE_FILE = path.join(VENDOR_DIR, "..", "cookies.txt");
 
+let inlineCookiesFile = null;
+
+/**
+ * Turn YTDLP_COOKIES (raw Netscape cookies.txt text, or base64 of it) into a
+ * temp file. This is the only way to hand cookies to a host like Render, where
+ * there is no browser and no persistent disk to drop a file onto.
+ */
+function inlineCookieFile() {
+  if (inlineCookiesFile) return inlineCookiesFile;
+
+  const raw = process.env.YTDLP_COOKIES;
+  if (!raw) return null;
+
+  let text = raw;
+  // A real cookies.txt is tab-separated and carries a "# Netscape" banner.
+  // Anything else that decodes cleanly is treated as base64.
+  if (!text.includes("\t") && !text.includes("Netscape")) {
+    try {
+      const decoded = Buffer.from(text, "base64").toString("utf8");
+      if (decoded.includes("\t")) text = decoded;
+    } catch {
+      /* keep the raw value */
+    }
+  }
+
+  try {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "ytdlp-cookies-"));
+    const file = path.join(dir, "cookies.txt");
+    fs.writeFileSync(file, text, { mode: 0o600 });
+    return (inlineCookiesFile = file);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * yt-dlp args that authenticate the request, so age/region-restricted and
  * "confirm you're not a bot" links succeed.
  *
- * Configure via .env:
+ * Configure via .env, in order of preference:
  *   YTDLP_COOKIES_FILE      path to a Netscape-format cookies.txt
+ *   YTDLP_COOKIES           the cookies.txt contents (or base64), for hosts
+ *                           with no disk — e.g. a Render environment variable
  *   YTDLP_COOKIES_BROWSER   browser to read cookies from: chrome|firefox|edge
  */
 function cookieArgs() {
@@ -99,7 +137,7 @@ function cookieArgs() {
 
   const args = [];
   const cookiesFile =
-    process.env.YTDLP_COOKIES_FILE || firstExisting([AUTO_COOKIE_FILE]);
+    process.env.YTDLP_COOKIES_FILE || inlineCookieFile() || firstExisting([AUTO_COOKIE_FILE]);
   const browser = process.env.YTDLP_COOKIES_BROWSER;
 
   if (cookiesFile) args.push("--cookies", cookiesFile);
@@ -108,6 +146,14 @@ function cookieArgs() {
   cookieArgsCache = args;
   return args;
 }
+
+/** True when any explicit cookie source is configured. */
+const hasExplicitCookies = () =>
+  Boolean(
+    process.env.YTDLP_COOKIES_FILE ||
+      process.env.YTDLP_COOKIES ||
+      process.env.YTDLP_COOKIES_BROWSER
+  );
 
 /**
  * Everything that shapes the network identity of a request: cookies plus, when
@@ -121,20 +167,67 @@ function networkArgs() {
   return args;
 }
 
-/* Browsers to borrow a signed-in YouTube session from, best guess first. */
-const FALLBACK_BROWSERS = ["chrome", "edge", "firefox", "brave"];
+/* Browser profile directories, so we only ever offer a browser that is really
+   installed. Checking the filesystem matters on servers: blindly passing
+   `--cookies-from-browser brave` on Render produces a confusing "could not find
+   brave cookies database" error that hides the real YouTube failure. */
+const BROWSER_PROFILES = {
+  chrome: [
+    "%LOCALAPPDATA%/Google/Chrome/User Data",
+    "~/.config/google-chrome",
+    "~/Library/Application Support/Google/Chrome",
+  ],
+  edge: [
+    "%LOCALAPPDATA%/Microsoft/Edge/User Data",
+    "~/.config/microsoft-edge",
+    "~/Library/Application Support/Microsoft Edge",
+  ],
+  firefox: [
+    "%APPDATA%/Mozilla/Firefox/Profiles",
+    "~/.mozilla/firefox",
+    "~/Library/Application Support/Firefox/Profiles",
+  ],
+  brave: [
+    "%LOCALAPPDATA%/BraveSoftware/Brave-Browser/User Data",
+    "~/.config/BraveSoftware/Brave-Browser",
+    "~/Library/Application Support/BraveSoftware/Brave-Browser",
+  ],
+  chromium: [
+    "%LOCALAPPDATA%/Chromium/User Data",
+    "~/.config/chromium",
+    "~/Library/Application Support/Chromium",
+  ],
+};
+
+const expandProfileDir = (dir) => {
+  if (dir.startsWith("~")) return path.join(os.homedir(), dir.slice(1));
+  const match = dir.match(/^%(LOCALAPPDATA|APPDATA)%(.*)$/);
+  if (match) return path.join(process.env[match[1]] || "", match[2]);
+  return dir;
+};
+
+const installedBrowsers = () =>
+  Object.keys(BROWSER_PROFILES).filter((name) =>
+    firstExisting(BROWSER_PROFILES[name].map(expandProfileDir))
+  );
+
+let browserFallbacksCache = null;
 
 /**
  * Browser-cookie strategies to try only after every explicit method has failed.
  *
- * Empty when a cookie source is already configured (it was used from the
- * start), so this never duplicates work. On a server there is no browser, so
- * each attempt fails immediately and nothing changes.
+ * Empty when a cookie source is already configured (it was used from the start)
+ * or when no browser is actually installed — always true on a server — so this
+ * never duplicates work or produces misleading errors.
  */
 function browserCookieFallbacks() {
-  if (process.env.YTDLP_COOKIES_FILE || process.env.YTDLP_COOKIES_BROWSER) return [];
-  if (firstExisting([AUTO_COOKIE_FILE])) return [];
-  return FALLBACK_BROWSERS;
+  if (browserFallbacksCache) return browserFallbacksCache;
+
+  if (hasExplicitCookies() || firstExisting([AUTO_COOKIE_FILE])) {
+    return (browserFallbacksCache = []);
+  }
+
+  return (browserFallbacksCache = installedBrowsers());
 }
 
 const playerClientArgs = (clients) => [
@@ -684,6 +777,10 @@ function inspectWithYtDlp(binary, url) {
       }
     }
 
+    // The extraction failure is the one worth reporting. A later browser-borrow
+    // failure ("could not find brave cookies database") would only bury it.
+    const extractionError = lastError;
+
     // Last resort: borrow a logged-in browser's YouTube session. This is what
     // makes "Sign in to confirm you're not a bot" clear on a personal machine.
     for (const browser of browserCookieFallbacks()) {
@@ -695,11 +792,11 @@ function inspectWithYtDlp(binary, url) {
     }
 
     throw new Error(
-      `${lastError?.message || "Could not read that link."} ` +
+      `${extractionError?.message || lastError?.message || "Could not read that link."} ` +
         "YouTube is asking this server to prove it is not a bot. Fixes, in order: " +
-        "set YTDLP_COOKIES_FILE to a cookies.txt exported from a signed-in YouTube " +
-        "session, set YTDLP_COOKIES_BROWSER to a browser installed on this machine, " +
-        "or set YTDLP_PROXY to a residential proxy, then restart the server."
+        "set YTDLP_COOKIES (or YTDLP_COOKIES_FILE) to cookies exported from a " +
+        "signed-in YouTube session, or set YTDLP_PROXY to a residential proxy, " +
+        "then restart the server."
     );
   })();
 }
