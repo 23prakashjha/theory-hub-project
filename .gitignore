@@ -25,10 +25,5 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Uploads / vendored binaries (fetched by Backend/scripts/vendor-ytdlp.mjs)
+# Uploaded files (Backend)
 Backend/uploads/
-Backend/vendor/
-
-# Exported YouTube session cookies — a live credential, never commit it
-cookies.txt
-Backend/cookies.txt

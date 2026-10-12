@@ -1,6 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
-import { FaBookOpen, FaCode, FaDownload, FaExternalLinkAlt, FaBars, FaCreditCard, FaRegEnvelope, FaTimes } from "react-icons/fa";
+import { FaBookOpen, FaCode, FaExternalLinkAlt, FaBars, FaCreditCard, FaRegEnvelope, FaTimes, FaUserTie } from "react-icons/fa";
 import { Button } from "./ui/primitives";
 import { cx } from "../lib/cx";
 
@@ -8,8 +8,7 @@ const LINKS = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
   { to: "/library", label: "Library", icon: FaBookOpen },
-  { to: "/downloader", label: "Grab", icon: FaDownload },
-  { to: "/history", label: "History" },
+  { to: "/interview", label: "Interview", icon: FaUserTie },
   { to: "/pricing", label: "Pricing", icon: FaCreditCard },
   { to: "/contact", label: "Contact", icon: FaRegEnvelope },
 ];

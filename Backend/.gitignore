@@ -5,9 +5,3 @@ node_modules/
 
 # Uploaded PDFs
 uploads/
-
-# yt-dlp binary, fetched by scripts/vendor-ytdlp.mjs on `npm install`
-vendor/
-
-# Exported YouTube session cookies — a live credential, never commit it
-cookies.txt

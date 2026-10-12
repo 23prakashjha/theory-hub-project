@@ -8,8 +8,7 @@ import { uploadsConfig } from "./config/env.js";
 // Routes
 import userRoutes from "./routes/userRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
-import mediaRoutes from "./routes/mediaRoutes.js";
-import { mediaCapabilities, refreshYtDlp } from "./services/mediaService.js";
+import interviewRoutes from "./routes/interviewRoutes.js";
 
 dotenv.config();
 
@@ -66,9 +65,8 @@ app.use("/api/users", userRoutes);
 
 app.use("/api/documents", documentRoutes);
 
-// -------------------- Media downloads --------------------
-
-app.use("/api/media", mediaRoutes);
+// -------------------- Interview question bank --------------------
+app.use("/api/interview", interviewRoutes);
 
 // Health check
 app.get("/", (req, res) => {
@@ -109,20 +107,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`🚀 Server running on port ${PORT}`)
 );
-
-// yt-dlp drives the media downloader. It is fetched by `npm install` into
-// Backend/vendor (see scripts/vendor-ytdlp.mjs), so report its state loudly
-// rather than letting every request fail later.
-const { ytdlp, ffmpeg } = mediaCapabilities();
-
-console.log(
-  ytdlp
-    ? `🎬 yt-dlp found — media downloads enabled${ffmpeg ? "" : " (ffmpeg missing: streams cannot be merged)"}`
-    : "⚠️  yt-dlp NOT found — /api/media/info will only accept direct media links.\n" +
-        "   This is normally installed by `npm install`; re-run it in Backend/,\n" +
-        "   or set YTDLP_PATH to an existing yt-dlp binary."
-);
-
-// Pull the latest stable yt-dlp in the background. YouTube breaks older
-// extractors every few weeks, so a stale build should heal itself on restart.
-if (ytdlp) refreshYtDlp();

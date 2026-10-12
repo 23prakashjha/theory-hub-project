@@ -70,6 +70,7 @@
   --animate-shimmer: shimmer 2.4s linear infinite;
   --animate-rise: rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
   --animate-pop: pop 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-page: pageIn 0.55s ease-out both;
   --animate-marquee: marquee 38s linear infinite;
   --animate-spin-slow: spin 16s linear infinite;
   --animate-sheen: sheen 2.6s ease-in-out infinite;
@@ -131,6 +132,18 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* Page transition. Opacity-only on purpose: a transform on the routed
+   wrapper would become a containing block and break `position: fixed`
+   modals rendered inside pages. */
+@keyframes pageIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

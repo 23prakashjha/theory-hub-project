@@ -23,8 +23,7 @@ const COLUMNS = [
     links: [
       { label: "Home", to: "/" },
       { label: "My Library", to: "/library" },
-      { label: "Media Grab", to: "/downloader" },
-      { label: "Download History", to: "/history" },
+      { label: "Interview Bank", to: "/interview" },
       { label: "Quiz Practice", href: QUIZ_URL },
       { label: "Dashboard", to: "/admin" },
     ],
@@ -206,6 +205,9 @@ const Footer = () => {
             </Link>
             <Link to="/library" className="transition-colors hover:text-white">
               Library
+            </Link>
+            <Link to="/interview" className="transition-colors hover:text-white">
+              Interview
             </Link>
             <a
               href={QUIZ_URL}

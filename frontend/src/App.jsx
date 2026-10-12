@@ -15,9 +15,8 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import About from "./pages/About";
 import Library from "./pages/Library";
+import Interview from "./pages/Interview";
 import AdminDashboard from "./pages/AdminDashboard";
-import Downloader from "./pages/Downloader";
-import History from "./pages/History";
 import Pricing from "./pages/Pricing";
 import Contact from "./pages/Contact";
 
@@ -39,6 +38,27 @@ const ScrollToTop = () => {
   }, [pathname, hash]);
 
   return null;
+};
+
+/** Animates every routed page in with one place to change. */
+const AnimatedRoutes = () => {
+  const { pathname } = useLocation();
+
+  return (
+    <div key={pathname} className="animate-page">
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/library" element={<Library />} />
+        <Route path="/interview" element={<Interview />} />
+        <Route path="/pricing" element={<Pricing />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        {/* Removed pages redirect home instead of rendering a blank view. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </div>
+  );
 };
 
 const App = () => (
@@ -70,18 +90,7 @@ const App = () => (
       <Navbar />
 
       <main id="main" className="flex-1">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/library" element={<Library />} />
-          <Route path="/downloader" element={<Downloader />} />
-          <Route path="/history" element={<History />} />
-          <Route path="/pricing" element={<Pricing />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          {/* Removed pages redirect home instead of rendering a blank view. */}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <AnimatedRoutes />
       </main>
 
       <Footer />
