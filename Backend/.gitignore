@@ -2,3 +2,6 @@
 
 # Uploaded PDFs
 uploads/
+
+# yt-dlp binary, fetched by scripts/vendor-ytdlp.mjs on `npm install`
+vendor/

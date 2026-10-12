@@ -21,7 +21,8 @@ import https from "node:https";
 import net from "node:net";
 import path from "node:path";
 import dns from "node:dns/promises";
-import { URL } from "node:url";
+import { createRequire } from "node:module";
+import { URL, fileURLToPath } from "node:url";
 import { uploadsConfig } from "../config/env.js";
 
 /* ------------------------------------------------------------------ Config */
@@ -65,9 +66,13 @@ const MAX_ACTIVE_BYTES = 8 * 1024 * 1024 * 1024;
 const TASK_TTL_MS = 24 * 60 * 60 * 1000;
 
 let ytDlpBinary = null;
+let ffmpegLocation;
 let cookieArgsCache = null;
 
 /* ---------------------------------------------------------------- yt-dlp */
+
+/** Where `npm install` puts the yt-dlp binary (see scripts/vendor-ytdlp.mjs). */
+const VENDOR_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "vendor");
 
 /**
  * yt-dlp args that pass cookies, so age/region-restricted and "confirm you're
@@ -96,79 +101,167 @@ const playerClientArgs = (clients) => [
   `youtube:player_client=${clients.join(",")}`,
 ];
 
-/** Locate yt-dlp on PATH, then in the usual per-platform install locations. */
+/** Sentinel meaning "ffmpeg is on PATH", so yt-dlp needs no --ffmpeg-location. */
+const ON_PATH = Symbol("ffmpeg-on-path");
+
+/** First readable path from a candidate list, or null. */
+function firstExisting(paths) {
+  for (const candidate of paths) {
+    try {
+      if (candidate && fs.existsSync(candidate)) return candidate;
+    } catch {
+      /* unreadable path */
+    }
+  }
+  return null;
+}
+
+/**
+ * Locate yt-dlp.
+ *
+ * Search order matters: the vendored copy first, so a project that installed
+ * its own binary is not silently overridden by whatever happens to be on the
+ * host's PATH (a stale distro package, say). YTDLP_PATH is the escape hatch
+ * for anyone who wants a specific build.
+ */
 function findYtDlp() {
   if (ytDlpBinary) return ytDlpBinary;
 
-  const candidates = process.platform === "win32" ? ["yt-dlp.exe", "yt-dlp"] : ["yt-dlp"];
-  const check = process.platform === "win32" ? "where" : "which";
+  const isWindows = process.platform === "win32";
+  const exe = isWindows ? "yt-dlp.exe" : "yt-dlp";
 
-  for (const candidate of candidates) {
+  const override = process.env.YTDLP_PATH;
+  if (override) {
+    try {
+      if (fs.existsSync(override)) return (ytDlpBinary = override);
+    } catch {
+      /* bad override, fall through to the normal search */
+    }
+  }
+
+  const vendored = firstExisting([path.join(VENDOR_DIR, exe)]);
+  if (vendored) return (ytDlpBinary = vendored);
+
+  // On PATH. `where`/`which` are read through a shell, but both receive a fixed
+  // literal name here, never anything derived from a request.
+  const check = isWindows ? "where" : "which";
+  for (const candidate of isWindows ? [exe, "yt-dlp"] : [exe]) {
     try {
       execSync(`${check} ${candidate}`, { stdio: "pipe" });
-      ytDlpBinary = candidate;
-      return candidate;
+      return (ytDlpBinary = candidate);
     } catch {
       /* not on PATH */
     }
   }
 
+  // Common per-platform install locations, for a binary installed by hand.
   const locations = [];
-  if (process.platform === "win32") {
+  if (isWindows) {
     const local = process.env.LOCALAPPDATA || "";
     locations.push(
-      path.join(local, "Microsoft", "WinGet", "Links", "yt-dlp.exe"),
-      path.join(local, "Programs", "yt-dlp", "yt-dlp.exe"),
+      path.join(local, "Microsoft", "WinGet", "Links", exe),
+      path.join(local, "Programs", "yt-dlp", exe),
       "C:\\yt-dlp\\yt-dlp.exe"
     );
 
     const packages = path.join(local, "Microsoft", "WinGet", "Packages");
     try {
       for (const dir of fs.readdirSync(packages).filter((d) => d.startsWith("yt-dlp"))) {
-        locations.push(path.join(packages, dir, "yt-dlp.exe"));
+        locations.push(path.join(packages, dir, exe));
       }
     } catch {
       /* packages dir missing */
     }
+  } else {
+    locations.push(
+      "/usr/local/bin/yt-dlp",
+      "/usr/bin/yt-dlp",
+      "/opt/homebrew/bin/yt-dlp", // macOS
+      path.join(process.env.HOME || "", ".local", "bin", "yt-dlp")
+    );
   }
 
-  for (const location of locations) {
-    try {
-      if (fs.existsSync(location)) {
-        ytDlpBinary = location;
-        return location;
-      }
-    } catch {
-      /* unreadable path */
-    }
-  }
+  const installed = firstExisting(locations);
+  if (installed) return (ytDlpBinary = installed);
 
   return null;
 }
 
-/** yt-dlp needs ffmpeg to merge separate video+audio streams. */
-function findFfmpegDir() {
-  if (process.platform !== "win32") return null;
-
-  const packages = path.join(process.env.LOCALAPPDATA || "", "Microsoft", "WinGet", "Packages");
+/**
+ * ffmpeg and ffprobe ship as CommonJS packages exporting `{ path }`. They are
+ * loaded through createRequire because this file is ESM, and inside a try so a
+ * stripped-down install without them still boots.
+ */
+function binaryFrom(specifier) {
   try {
-    for (const dir of fs.readdirSync(packages)) {
-      if (!dir.startsWith("yt-dlp.FFmpeg")) continue;
-      const root = path.join(packages, dir);
-      for (const sub of fs.readdirSync(root)) {
-        const bin = path.join(root, sub, "bin", "ffmpeg.exe");
-        if (fs.existsSync(bin)) return path.join(root, sub, "bin");
-      }
-    }
+    const resolved = createRequire(import.meta.url)(specifier)?.path;
+    if (resolved && fs.existsSync(resolved)) return resolved;
   } catch {
-    /* packages dir missing */
+    /* optional dependency not installed */
   }
   return null;
 }
 
-/** True when the binary we resolved is actually usable right now. */
+/**
+ * yt-dlp needs ffmpeg to merge separate video+audio streams, and ffprobe to
+ * inspect them when remuxing.
+ *
+ * @ffmpeg-installer and @ffprobe-installer ship prebuilt binaries as npm
+ * optionalDependencies, so npm resolves the correct one for whichever platform
+ * is installing. That makes them available inside Render's Linux containers,
+ * where nothing can be apt-get'd at runtime, and keeps Windows working with no
+ * WinGet install. An ffmpeg already on PATH still wins, as does FFMPEG_PATH.
+ *
+ * @returns a value for yt-dlp's --ffmpeg-location, or null when unavailable.
+ */
+function findFfmpegLocation() {
+  if (ffmpegLocation !== undefined) return ffmpegLocation;
+
+  const override = process.env.FFMPEG_PATH;
+  if (override) {
+    const found = firstExisting([override, path.join(override, "ffmpeg")]);
+    if (found) return (ffmpegLocation = found);
+  }
+
+  try {
+    const check = process.platform === "win32" ? "where" : "which";
+    execSync(`${check} ffmpeg`, { stdio: "pipe" });
+    // yt-dlp already searches PATH, so no --ffmpeg-location is needed. Null is
+    // reserved for "genuinely unavailable", hence a distinct sentinel here.
+    return (ffmpegLocation = ON_PATH);
+  } catch {
+    /* not on PATH; fall through to the npm-provided binaries */
+  }
+
+  // yt-dlp locates ffprobe relative to ffmpeg, so hand it a directory. The two
+  // npm packages install into sibling directories, so point at whichever is
+  // present; a lone ffmpeg is still enough to merge.
+  const installed = binaryFrom("@ffmpeg-installer/ffmpeg") || binaryFrom("@ffprobe-installer/ffprobe");
+  return (ffmpegLocation = installed ? path.dirname(installed) : null);
+}
+
+/** True when a yt-dlp binary was found, so non-direct links can be resolved. */
 export function isYtDlpAvailable() {
   return Boolean(findYtDlp());
+}
+
+/** True when ffmpeg is available, so separate streams can be merged. */
+export function isFfmpegAvailable() {
+  return findFfmpegLocation() !== null;
+}
+
+/**
+ * What the downloader can actually do, for GET /api/media/status.
+ *
+ * The frontend uses this to decide whether to tell someone that a link failed
+ * because the server is missing yt-dlp, which is a very different problem from
+ * the link itself being bad.
+ */
+export function mediaCapabilities() {
+  return {
+    ytdlp: isYtDlpAvailable(),
+    ffmpeg: isFfmpegAvailable(),
+  };
 }
 
 /* -------------------------------------------------------------- URL safety */
@@ -502,8 +595,9 @@ function inspectWithYtDlp(binary, url) {
 
     throw new Error(
       `${lastError?.message || "Could not read that link."} ` +
-        "If this is a YouTube link, set YTDLP_COOKIES_BROWSER=chrome in Backend/.env " +
-        "(or YTDLP_COOKIES_FILE to a cookies.txt path) and restart the server."
+        "For a YouTube link that needs sign-in or an age check, set " +
+        "YTDLP_COOKIES_FILE to a cookies.txt path (or YTDLP_COOKIES_BROWSER) " +
+        "in the server environment and restart it."
     );
   })();
 }
@@ -531,9 +625,13 @@ export async function getMediaInfo(rawUrl) {
 
   const binary = findYtDlp();
   if (!binary) {
+    // Normally unreachable: `npm install` vendors a binary into Backend/vendor
+    // (see scripts/vendor-ytdlp.mjs). This only fires if that download failed,
+    // so point at the thing that actually fixes it.
     throw new Error(
-      "yt-dlp is required to read this link but is not installed. " +
-        "Install it with: winget install yt-dlp (or pip install yt-dlp)."
+      "This server has no yt-dlp binary, so only direct media links can be read. " +
+        "The usual cause is a build where the postinstall download could not reach GitHub. " +
+        "Re-run `npm install` in the Backend folder, or set YTDLP_PATH to an existing yt-dlp."
     );
   }
 
@@ -911,8 +1009,10 @@ async function downloadWithYtDlp({ url, formatId }, task, outTemplate) {
 
     const baseArgs = ["--no-playlist", "--no-mtime", "--no-warnings", ...RESILIENCE_ARGS];
 
-    const ffmpegDir = findFfmpegDir();
-    if (ffmpegDir) baseArgs.push("--ffmpeg-location", ffmpegDir);
+    const ffmpegLocationArg = findFfmpegLocation();
+    if (ffmpegLocationArg && ffmpegLocationArg !== ON_PATH) {
+      baseArgs.push("--ffmpeg-location", ffmpegLocationArg);
+    }
 
     baseArgs.push(...cookieArgs(), ...playerClientArgs(clientSets[clientIndex]));
 

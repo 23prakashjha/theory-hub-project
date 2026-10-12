@@ -11,7 +11,7 @@ import {
   getMediaInfo,
   getTaskFile,
   getTaskProgress,
-  isYtDlpAvailable,
+  mediaCapabilities,
   sendTaskFile,
   startDownloadTask,
 } from "../services/mediaService.js";
@@ -30,7 +30,7 @@ const MAX_URL_LENGTH = 2000;
 // @desc    Whether the yt-dlp backend is ready to accept links
 // @access  Private
 router.get("/status", (req, res) => {
-  res.json({ ytdlp: isYtDlpAvailable() });
+  res.json(mediaCapabilities());
 });
 
 // @route   POST /api/media/info
@@ -45,8 +45,9 @@ router.post("/info", async (req, res) => {
   try {
     res.json(await getMediaInfo(url));
   } catch (err) {
-    // These are user-facing messages ("link unsupported", "install yt-dlp"),
-    // not internal faults, so they are passed through rather than masked.
+    // These are user-facing messages ("link unsupported", "no yt-dlp on the
+    // server"), not internal faults, so they pass through rather than being
+    // masked as a generic 500.
     sendError(res, 400, err.message);
   }
 });

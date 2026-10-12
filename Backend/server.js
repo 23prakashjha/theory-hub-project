@@ -9,7 +9,7 @@ import { uploadsConfig } from "./config/env.js";
 import userRoutes from "./routes/userRoutes.js";
 import documentRoutes from "./routes/documentRoutes.js";
 import mediaRoutes from "./routes/mediaRoutes.js";
-import { isYtDlpAvailable } from "./services/mediaService.js";
+import { mediaCapabilities } from "./services/mediaService.js";
 
 dotenv.config();
 
@@ -110,11 +110,15 @@ app.listen(PORT, () =>
   console.log(`🚀 Server running on port ${PORT}`)
 );
 
-// yt-dlp drives the media downloader. It is an external binary rather than an
-// npm dependency, so report its state loudly instead of failing at request time.
+// yt-dlp drives the media downloader. It is fetched by `npm install` into
+// Backend/vendor (see scripts/vendor-ytdlp.mjs), so report its state loudly
+// rather than letting every request fail later.
+const { ytdlp, ffmpeg } = mediaCapabilities();
+
 console.log(
-  isYtDlpAvailable()
-    ? "🎬 yt-dlp found — media downloads enabled"
-    : "⚠️  yt-dlp NOT found — /api/media/info will reject non-direct URLs.\n" +
-        "   Install it with: winget install yt-dlp  (or: pip install yt-dlp)"
+  ytdlp
+    ? `🎬 yt-dlp found — media downloads enabled${ffmpeg ? "" : " (ffmpeg missing: streams cannot be merged)"}`
+    : "⚠️  yt-dlp NOT found — /api/media/info will only accept direct media links.\n" +
+        "   This is normally installed by `npm install`; re-run it in Backend/,\n" +
+        "   or set YTDLP_PATH to an existing yt-dlp binary."
 );
